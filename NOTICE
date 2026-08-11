@@ -1,0 +1,15 @@
+OSWorld-CogAgent
+Copyright 2026 issumer-ku
+
+This product includes concepts and runner integration patterns adapted from
+OSWorld, Copyright 2023-present the OSWorld contributors, licensed under the
+Apache License, Version 2.0:
+https://github.com/xlang-ai/OSWorld
+
+This project integrates with CogAgent but does not include or redistribute
+CogAgent model weights. CogAgent source and model licenses are available at:
+https://github.com/zai-org/CogAgent
+https://huggingface.co/zai-org/cogagent-9b-20241220
+
+OSWorld-CogAgent is an independent, unofficial integration and is not endorsed
+by the OSWorld or CogAgent maintainers.
