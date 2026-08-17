@@ -12,6 +12,20 @@ class CogAgentActionParserTest(unittest.TestCase):
         parsed = self.parse("CLICK(box=[[100,200,300,400]], element_info='Save')")
         self.assertEqual(parsed.pyautogui_code, ["pyautogui.click(384, 324)"])
 
+    def test_click_accepts_zero_padded_coordinate_literals(self):
+        parsed = self.parse("CLICK(box=[[143,057,170,082]], element_info='Colors')")
+        self.assertEqual(parsed.pyautogui_code, ["pyautogui.click(300, 75)"])
+
+    def test_type_accepts_zero_padded_coordinates_without_changing_text(self):
+        parsed = self.parse(
+            "TYPE(box=[[062,083,931,111]], text='007', element_info='search')"
+        )
+        self.assertEqual(parsed.pyautogui_code[0], "pyautogui.click(953, 105)")
+        self.assertEqual(
+            parsed.pyautogui_code[-1],
+            'pyautogui.write("007", interval=0.01)',
+        )
+
     def test_multiline_type_preserves_text(self):
         parsed = self.parse(
             "TYPE(\nbox=[[400,400,600,500]],\ntext='hello, world',\n"

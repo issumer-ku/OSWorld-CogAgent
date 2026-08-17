@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import ast
+import io
 import json
 import re
+import tokenize
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -90,12 +92,61 @@ def _literal(node: ast.AST) -> Any:
     raise ValueError(f"Unsupported CogAgent expression: {ast.dump(node)}")
 
 
+def _normalize_integer_literals(text: str) -> str:
+    """Normalize model-emitted decimal integers such as 057 to 57.
+
+    Python 3 rejects decimal integer literals with leading zeroes. CogAgent
+    occasionally pads normalized coordinates to three digits, so tokenize the
+    expression and join only adjacent integer tokens. Quoted text and other
+    literal types remain untouched.
+    """
+    try:
+        tokens = list(tokenize.generate_tokens(io.StringIO(text).readline))
+    except (tokenize.TokenError, IndentationError):
+        return text
+
+    normalized: list[tokenize.TokenInfo] = []
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if token.type == tokenize.NUMBER and token.string.isdigit():
+            digits = token.string
+            end = token.end
+            next_index = index + 1
+            while next_index < len(tokens):
+                following = tokens[next_index]
+                if (
+                    following.type != tokenize.NUMBER
+                    or not following.string.isdigit()
+                    or following.start != end
+                ):
+                    break
+                digits += following.string
+                end = following.end
+                next_index += 1
+            if next_index > index + 1:
+                token = tokenize.TokenInfo(
+                    token.type,
+                    str(int(digits, 10)),
+                    token.start,
+                    end,
+                    token.line,
+                )
+                index = next_index
+                normalized.append(token)
+                continue
+        normalized.append(token)
+        index += 1
+    return tokenize.untokenize(normalized)
+
+
 def parse_operation_expression(operation: str) -> dict[str, Any]:
     text = (operation or "").strip()
     if text.upper() == "END":
         return {"operation": "END", "args": [], "kwargs": {}}
+    normalized_text = _normalize_integer_literals(text)
     try:
-        tree = ast.parse(text, mode="eval")
+        tree = ast.parse(normalized_text, mode="eval")
     except SyntaxError as exc:
         raise ValueError(f"Invalid Grounded Operation syntax: {text}") from exc
     value = _literal(tree.body)
